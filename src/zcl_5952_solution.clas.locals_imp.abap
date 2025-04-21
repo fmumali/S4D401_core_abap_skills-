@@ -149,7 +149,7 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
            TO r_result.
     APPEND |Planetype:      { planetype  } | TO r_result.
     APPEND |Maximum Seats:  { seats_max  } | TO r_result.
-    APPEND |Occupied Seats: { seats_max } | TO r_result.
+    APPEND |Occupied Seats: { seats_occ } | TO r_result.
     APPEND |Free Seats:     { seats_free } | TO r_result.
     APPEND |Ticket Price:   { price CURRENCY = currency } { currency } | TO r_result.
 
@@ -355,7 +355,7 @@ CLASS lcl_carrier DEFINITION .
   PRIVATE SECTION.
 
     DATA name          TYPE /dmo/carrier_name .
-    DATA currency_code TYPE /dmo/currency_code.
+    DATA currency_code TYPE /dmo/currency_code ##NEEDED.
 
     DATA passenger_flights TYPE lcl_passenger_flight=>tt_flights.
 
