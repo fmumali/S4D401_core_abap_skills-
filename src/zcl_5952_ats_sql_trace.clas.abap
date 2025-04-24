@@ -72,7 +72,7 @@ CLASS ZCL_5952_ATS_SQL_TRACE IMPLEMENTATION.
          IMPORTING
            e_flight =     DATA(cargo_flight)
            e_days_later = DATA(days_later2)
-                         ).
+           ).
 
       IF cargo_flight IS BOUND.
         out->write( name = |Found a suitable cargo flight in { days_later2 } days:|

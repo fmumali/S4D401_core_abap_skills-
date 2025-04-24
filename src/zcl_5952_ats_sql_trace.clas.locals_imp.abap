@@ -221,8 +221,8 @@ CLASS lcl_cargo_flight DEFINITION .
     TYPES
        tt_flights TYPE STANDARD TABLE OF REF TO lcl_cargo_flight WITH DEFAULT KEY.
 
-    DATA carrier_id    TYPE /dmo/connection_id    READ-ONLY.
-    DATA connection_id TYPE /dmo/carrier_id       READ-ONLY.
+    DATA carrier_id    TYPE /dmo/carrier_id       READ-ONLY.
+    DATA connection_id TYPE /dmo/connection_id    READ-ONLY.
     DATA flight_date   TYPE /dmo/flight_date      READ-ONLY.
 
     METHODS constructor
@@ -324,8 +324,8 @@ CLASS lcl_cargo_flight IMPLEMENTATION.
           INTO CORRESPONDING FIELDS OF @flight_raw.
     ENDTRY.
 
-    carrier_id    = i_carrier_id.
-    connection_id = i_connection_id.
+    carrier_id    = i_carrier_id .
+    connection_id = i_connection_id .
     flight_date   = i_flight_date.
 
     planetype = flight_raw-plane_type_id.
@@ -364,7 +364,7 @@ CLASS lcl_carrier DEFINITION .
 
   PUBLIC SECTION.
 
-    TYPES t_output TYPE c LENGTH 40.
+    TYPES t_output TYPE string.
     TYPES tt_output TYPE STANDARD TABLE OF t_output
                     WITH NON-UNIQUE DEFAULT KEY.
 
