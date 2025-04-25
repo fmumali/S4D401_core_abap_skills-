@@ -231,16 +231,29 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
 
   METHOD get_description.
 
-    APPEND |Flight { carrier_id } { connection_id } on { flight_date DATE = USER } | &&
-           |from { connection_details-airport_from_id } to { connection_details-airport_to_id } |
-           TO r_result.
-    APPEND |Planetype:      { planetype  } | TO r_result.
-    APPEND |Maximum Seats:  { seats_max  } | TO r_result.
-    APPEND |Occupied Seats: { seats_occ  } | TO r_result.
-    APPEND |Free Seats:     { seats_free } | TO r_result.
-    APPEND |Ticket Price:   { price CURRENCY = currency } { currency } | TO r_result.
+*    APPEND |Flight { carrier_id } { connection_id } on { flight_date DATE = USER } | &&
+*           |from { connection_details-airport_from_id } to { connection_details-airport_to_id } |
+*           TO r_result.
+    DATA txt TYPE string.
 
-    APPEND |Duration:       { connection_details-duration } minutes| TO r_result.
+    txt = 'Flight &carrid& &connid& on &date& from &from& to &to&'(005).
+    txt = replace( val = txt sub = '&carrid&' with = carrier_id ).
+
+    txt = replace( val = txt sub = '&connid&' with = connection_id ).
+    txt = replace( val = txt sub = '&date&'   with = |{ flight_date DATE = USER }| ).
+    txt = replace( val = txt sub = '&from&'   with = connection_details-airport_from_id ).
+    txt = replace( val = txt sub = '&to&'     with = connection_details-airport_to_id ).
+
+    APPEND txt TO r_result.
+
+    APPEND |{ 'Planetype:'(006)      } { planetype  } | TO r_result.
+    APPEND |{ 'Maximum Seats:'(007)  } { seats_max  } | TO r_result.
+    APPEND |{ 'Occupied Seats:'(008) } { seats_occ  } | TO r_result.
+    APPEND |{ 'Free Seats:'(009)     } { seats_free } | TO r_result.
+    APPEND |{ 'Ticket Price:'(010)   } { price CURRENCY = currency } { currency } | TO r_result.
+
+    APPEND |{ 'Duration:'(011)       } { connection_details-duration } { 'minutes'(012) }| TO r_result.
+
 
   ENDMETHOD.
 
