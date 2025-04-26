@@ -59,4 +59,5 @@ CLASS zcl_5952_case_distinctions IMPLEMENTATION.
     ).
 
   ENDMETHOD.
+
 ENDCLASS.
