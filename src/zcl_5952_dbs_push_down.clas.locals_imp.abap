@@ -158,7 +158,14 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
     FIELDS carrier_id, connection_id, flight_date,
            plane_type_id, seats_max, seats_occupied,
            seats_max - seats_occupied AS seats_free,
-           price, currency_code
+           currency_conversion(
+                   amount              = price,
+                   source_currency     = currency_code,
+                   target_currency     = @currency,
+                   exchange_rate_date  = flight_date,
+                   on_error            = @sql_currency_conversion=>c_on_error-set_to_null
+                                     ) AS price,
+           @currency AS currency_code
      WHERE carrier_id = @i_carrier_id
       INTO TABLE @flights_buffer.
 
