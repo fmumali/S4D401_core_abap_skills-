@@ -20,7 +20,7 @@ CLASS zcl_5952_secondary_keys IMPLEMENTATION.
 
 data(object) = new lcl_flights( ).
 
-* object->read_primary( ).
+ object->read_primary( ).
 object->read_non_key( ).
 object->read_secondary_1( ).
 object->read_secondary_2( ).
