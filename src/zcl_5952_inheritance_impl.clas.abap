@@ -1,0 +1,20 @@
+CLASS zcl_5952_inheritance_impl DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    INTERFACES if_oo_adt_classrun .
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS zcl_5952_inheritance_impl IMPLEMENTATION.
+
+
+  METHOD if_oo_adt_classrun~main.
+  ENDMETHOD.
+ENDCLASS.
