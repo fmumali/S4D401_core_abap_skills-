@@ -2,13 +2,23 @@
 *"* local helper classes, interface definitions and type
 *"* declarations
 
-CLASS lcl_passenger_flight DEFINITION .
+
+CLASS lcl_flight DEFINITION ABSTRACT.
 
   PUBLIC SECTION.
+
+    TYPES: BEGIN OF st_connection_details,
+             airport_from_id TYPE /dmo/airport_from_id,
+             airport_to_id   TYPE /dmo/airport_to_id,
+             departure_time  TYPE /dmo/flight_departure_time,
+             arrival_time    TYPE /dmo/flight_departure_time,
+             duration        TYPE i,
+           END OF st_connection_details.
 
     DATA carrier_id    TYPE /dmo/carrier_id       READ-ONLY.
     DATA connection_id TYPE /dmo/connection_id    READ-ONLY.
     DATA flight_date   TYPE /dmo/flight_date      READ-ONLY.
+
 
     METHODS constructor
       IMPORTING
@@ -16,29 +26,78 @@ CLASS lcl_passenger_flight DEFINITION .
         i_connection_id TYPE /dmo/connection_id
         i_flight_date   TYPE /dmo/flight_date.
 
-    TYPES:
-      BEGIN OF st_connection_details,
-        airport_from_id TYPE /dmo/airport_from_id,
-        airport_to_id   TYPE /dmo/airport_to_id,
-        departure_time  TYPE /dmo/flight_departure_time,
-        arrival_time    TYPE /dmo/flight_departure_time,
-        duration        TYPE i,
-      END OF st_connection_details.
-
-    TYPES
-      tt_flights TYPE STANDARD TABLE OF REF TO lcl_passenger_flight WITH DEFAULT KEY.
 
     METHODS: get_connection_details
       RETURNING
         VALUE(r_result) TYPE st_connection_details.
+
+    METHODS get_description
+      RETURNING
+        VALUE(r_result) TYPE string_table.
+
+  PROTECTED SECTION.
+    DATA planetype TYPE /dmo/plane_type_id.
+    DATA connection_details TYPE st_connection_details.
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS lcl_flight IMPLEMENTATION.
+
+  METHOD get_connection_details.
+    r_result = me->connection_details.
+  ENDMETHOD.
+
+  METHOD get_description.
+
+    DATA txt TYPE string.
+
+    txt = 'Flight &carrid& &connid& on &date& from &from& to &to&'(005).
+    txt = replace( val = txt sub = '&carrid&' with = carrier_id ).
+    txt = replace( val = txt sub = '&connid&' with = connection_id ).
+    txt = replace( val = txt sub = '&date&'   with = |{ flight_date DATE = USER }| ).
+    txt = replace( val = txt sub = '&from&' with = connection_details-airport_from_id ).
+    txt = replace( val = txt sub = '&to&'   with = connection_details-airport_to_id ).
+    APPEND txt TO r_result.
+
+    APPEND |{ 'Planetype:'(006)      } { planetype  } | TO r_result.
+
+  ENDMETHOD.
+
+  METHOD constructor.
+    me->carrier_id    = i_carrier_id.
+    me->connection_id = i_connection_id.
+    me->flight_date   = i_flight_date.
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS lcl_passenger_flight DEFINITION INHERITING FROM lcl_flight .
+
+  PUBLIC SECTION.
+
+    METHODS constructor
+      IMPORTING
+        i_carrier_id    TYPE /dmo/carrier_id
+        i_connection_id TYPE /dmo/connection_id
+        i_flight_date   TYPE /dmo/flight_date.
+
+
+
+    TYPES
+      tt_flights TYPE STANDARD TABLE OF REF TO lcl_passenger_flight WITH DEFAULT KEY.
+
+
 
     METHODS
       get_free_seats
         RETURNING
           VALUE(r_result) TYPE i.
 
-    METHODS
-      get_description RETURNING VALUE(r_result) TYPE string_table.
+*    METHODS
+*      get_description RETURNING VALUE(r_result) TYPE string_table.
+
+    METHODS get_description REDEFINITION.
 
     CLASS-METHODS class_constructor.
     CLASS-METHODS
@@ -51,7 +110,7 @@ CLASS lcl_passenger_flight DEFINITION .
   PROTECTED SECTION.
   PRIVATE SECTION.
 
-    DATA planetype TYPE /dmo/plane_type_id.
+
 
     DATA seats_max  TYPE /dmo/plane_seats_max.
     DATA seats_occ  TYPE /dmo/plane_seats_occupied.
@@ -81,7 +140,7 @@ CLASS lcl_passenger_flight DEFINITION .
           WITH NON-UNIQUE SORTED KEY sk_carrier COMPONENTS carrier_id.
 
 
-    DATA connection_details TYPE st_connection_details.
+
     DATA seats_free TYPE i.
 
     TYPES:
@@ -179,6 +238,12 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
 
   METHOD constructor.
 
+    super->constructor(
+      i_carrier_id = i_carrier_id
+      i_connection_id = i_connection_id
+      i_flight_date = i_flight_date
+     ).
+
     TRY.
         DATA(flight_raw) = flights_buffer[ carrier_id = i_carrier_id
                                           connection_id = i_connection_id
@@ -255,9 +320,7 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD get_connection_details.
-    r_result = me->connection_details.
-  ENDMETHOD.
+
 
 
   METHOD get_free_seats.
@@ -266,21 +329,23 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
 
   METHOD get_description.
 
+    r_result = super->get_description( ).
+
 *    APPEND |Flight { carrier_id } { connection_id } on { flight_date DATE = USER } | &&
 *           |from { connection_details-airport_from_id } to { connection_details-airport_to_id } |
 *           TO r_result.
 
-    DATA txt TYPE string.
-
-    txt = 'Flight &carrid& &connid& on &date& from &from& to &to&'(005).
-    txt = replace( val = txt sub = '&carrid&' with = carrier_id ).
-    txt = replace( val = txt sub = '&connid&' with = connection_id ).
-    txt = replace( val = txt sub = '&date&'   with = |{ flight_date DATE = USER }| ).
-    txt = replace( val = txt sub = '&from&' with = connection_details-airport_from_id ).
-    txt = replace( val = txt sub = '&to&'   with = connection_details-airport_to_id ).
-    APPEND txt TO r_result.
-
-    APPEND |{ 'Planetype:'(006)      } { planetype  } | TO r_result.
+*    DATA txt TYPE string.
+*
+*    txt = 'Flight &carrid& &connid& on &date& from &from& to &to&'(005).
+*    txt = replace( val = txt sub = '&carrid&' with = carrier_id ).
+*    txt = replace( val = txt sub = '&connid&' with = connection_id ).
+*    txt = replace( val = txt sub = '&date&'   with = |{ flight_date DATE = USER }| ).
+*    txt = replace( val = txt sub = '&from&' with = connection_details-airport_from_id ).
+*    txt = replace( val = txt sub = '&to&'   with = connection_details-airport_to_id ).
+*    APPEND txt TO r_result.
+*
+*    APPEND |{ 'Planetype:'(006)      } { planetype  } | TO r_result.
     APPEND |{ 'Maximum Seats:'(007)  } { seats_max  } | TO r_result.
     APPEND |{ 'Occupied Seats:'(008) } { seats_occ  } | TO r_result.
     APPEND |{ 'Free Seats:'(009)     } { seats_free } | TO r_result.
@@ -292,17 +357,17 @@ CLASS lcl_passenger_flight IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS lcl_cargo_flight DEFINITION .
+CLASS lcl_cargo_flight DEFINITION INHERITING FROM lcl_flight .
 
   PUBLIC SECTION.
 
-    TYPES: BEGIN OF st_connection_details,
-             airport_from_id TYPE /dmo/airport_from_id,
-             airport_to_id   TYPE /dmo/airport_to_id,
-             departure_time  TYPE /dmo/flight_departure_time,
-             arrival_time    TYPE /dmo/flight_departure_time,
-             duration        TYPE i,
-           END OF st_connection_details.
+*    TYPES: BEGIN OF st_connection_details,
+*             airport_from_id TYPE /dmo/airport_from_id,
+*             airport_to_id   TYPE /dmo/airport_to_id,
+*             departure_time  TYPE /dmo/flight_departure_time,
+*             arrival_time    TYPE /dmo/flight_departure_time,
+*             duration        TYPE i,
+*           END OF st_connection_details.
 
     TYPES
        tt_flights TYPE STANDARD TABLE OF REF TO lcl_cargo_flight WITH DEFAULT KEY.
@@ -311,10 +376,10 @@ CLASS lcl_cargo_flight DEFINITION .
 *    DATA carrier_id    TYPE /dmo/connection_id    READ-ONLY.
 *    DATA connection_id TYPE /dmo/carrier_id       READ-ONLY.
 * correct:
-    DATA carrier_id    TYPE /dmo/carrier_id       READ-ONLY.
-    DATA connection_id TYPE /dmo/connection_id    READ-ONLY.
+*    DATA carrier_id    TYPE /dmo/carrier_id       READ-ONLY.
+*    DATA connection_id TYPE /dmo/connection_id    READ-ONLY.
 
-    DATA flight_date   TYPE /dmo/flight_date      READ-ONLY.
+*    DATA flight_date   TYPE /dmo/flight_date      READ-ONLY.
 
     METHODS constructor
       IMPORTING
@@ -322,18 +387,21 @@ CLASS lcl_cargo_flight DEFINITION .
         i_connection_id TYPE /dmo/connection_id
         i_flight_date   TYPE /dmo/flight_date.
 
-    METHODS get_connection_details
-      RETURNING
-        VALUE(r_result) TYPE st_connection_details.
+*
+*    METHODS get_connection_details
+*      RETURNING
+*        VALUE(r_result) TYPE st_connection_details.
 
     METHODS
       get_free_capacity
         RETURNING
           VALUE(r_result) TYPE /lrn/plane_actual_load.
 
-    METHODS get_description
-      RETURNING
-        VALUE(r_result) TYPE string_table.
+*    METHODS get_description
+*      RETURNING
+*        VALUE(r_result) TYPE string_table.
+
+    METHODS get_description REDEFINITION.
 
     CLASS-METHODS
       get_flights_by_carrier
@@ -362,9 +430,9 @@ CLASS lcl_cargo_flight DEFINITION .
     TYPES tt_flights_buffer TYPE HASHED TABLE OF st_flights_buffer
                             WITH UNIQUE KEY carrier_id connection_id flight_date.
 
-    DATA connection_details TYPE st_connection_details.
+*    DATA connection_details TYPE st_connection_details.
 
-    DATA planetype TYPE /dmo/plane_type_id.
+*    DATA planetype TYPE /dmo/plane_type_id.
 
     DATA maximum_load TYPE /lrn/plane_maximum_load.
     DATA actual_load TYPE /lrn/plane_actual_load.
@@ -396,6 +464,12 @@ CLASS lcl_cargo_flight IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD constructor.
+
+    super->constructor(
+    i_carrier_id = i_carrier_id
+    i_connection_id = i_connection_id
+    i_flight_date = i_flight_date
+   ).
 
     " Read buffer
     TRY.
@@ -434,9 +508,9 @@ CLASS lcl_cargo_flight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD get_connection_details.
-    r_result = me->connection_details.
-  ENDMETHOD.
+*  METHOD get_connection_details.
+*    r_result = me->connection_details.
+*  ENDMETHOD.
 
 
   METHOD get_free_capacity.
@@ -445,10 +519,13 @@ CLASS lcl_cargo_flight IMPLEMENTATION.
 
   METHOD get_description.
 
-    APPEND |Flight { carrier_id } { connection_id } on { flight_date DATE = USER } | &&
-           |from { connection_details-airport_from_id } to { connection_details-airport_to_id } |
-           TO r_result.
-    APPEND |Planetype:     { planetype } |                         TO r_result.
+    r_result = super->get_description( ).
+
+*    APPEND |Flight { carrier_id } { connection_id } on { flight_date DATE = USER } | &&
+*           |from { connection_details-airport_from_id } to { connection_details-airport_to_id } |
+*           TO r_result.
+*    APPEND |Planetype:     { planetype } |                         TO r_result.
+
     APPEND |Maximum Load:  { maximum_load         } { load_unit }| TO r_result.
     APPEND |Free Capacity: { get_free_capacity( ) } { load_unit }| TO r_result.
 
