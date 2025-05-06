@@ -23,7 +23,8 @@ CLASS lcl_flight DEFINITION ABSTRACT.
 *        i_connection_id TYPE /dmo/connection_id
 *        i_flight_date   TYPE /dmo/flight_date.
 
-    TYPES: BEGIN OF st_connection_details,
+    TYPES: tab TYPE STANDARD TABLE OF REF TO lcl_flight WITH DEFAULT KEY,
+           BEGIN OF st_connection_details,
              airport_from_id TYPE /dmo/airport_from_id,
              airport_to_id   TYPE /dmo/airport_to_id,
              departure_time  TYPE /dmo/flight_departure_time,
@@ -548,7 +549,7 @@ CLASS lcl_carrier DEFINITION .
         i_from_date       TYPE /dmo/flight_date
         i_seats           TYPE i
       EXPORTING
-        e_flight          TYPE REF TO lcl_passenger_flight
+        e_flight          TYPE REF TO lcl_flight
         e_days_later      TYPE i.
 
     METHODS find_cargo_flight
@@ -558,7 +559,7 @@ CLASS lcl_carrier DEFINITION .
         i_from_date       TYPE /dmo/flight_date
         i_cargo           TYPE /lrn/plane_actual_load
       EXPORTING
-        e_flight          TYPE REF TO lcl_cargo_flight
+        e_flight          TYPE REF TO lcl_flight
         e_days_later      TYPE i.
 
   PROTECTED SECTION.
@@ -567,9 +568,12 @@ CLASS lcl_carrier DEFINITION .
     DATA name          TYPE string.
     DATA currency_code TYPE /dmo/currency_code ##NEEDED.
 
-    DATA passenger_flights TYPE lcl_passenger_flight=>tt_flights.
+*    DATA passenger_flights TYPE lcl_passenger_flight=>tt_flights.
+*    DATA cargo_flights TYPE lcl_cargo_flight=>tt_flights.
 
-    DATA cargo_flights TYPE lcl_cargo_flight=>tt_flights.
+     DATA flights           TYPE lcl_flight=>tab.
+     DATA pf_count TYPE i.
+     DATA cf_count TYPE i.
 
     METHODS get_average_free_seats
       RETURNING VALUE(r_result) TYPE i.
@@ -607,22 +611,37 @@ CLASS lcl_carrier IMPLEMENTATION.
       RAISE EXCEPTION TYPE cx_abap_auth_check_exception.
     ENDIF.
 
-    passenger_flights =
+    DATA(passenger_flights) =
         lcl_passenger_flight=>get_flights_by_carrier(
               i_carrier_id    = i_carrier_id ).
 
-    cargo_flights =
+     pf_count = lines(  passenger_flights ).
+
+    DATA(cargo_flights) =
         lcl_cargo_flight=>get_flights_by_carrier(
               i_carrier_id    = i_carrier_id ).
+
+cf_count = lines(  cargo_flights ).
+
+    flights =  VALUE #(  BASE flights
+                      FOR <flight> IN passenger_flights
+                      ( <flight> )
+                    ).
+
+    flights = VALUE #( BASE flights
+                        FOR cflight IN cargo_flights
+                        ( cflight )
+                     ).
+
 
   ENDMETHOD.
 
   METHOD get_output.
 
     APPEND |{ 'Carrier Name:'(001)       } { me->name } | TO r_result.
-    APPEND |{ 'Passenger Flights:'(002)  } { lines( passenger_flights ) } | TO r_result.
+    APPEND |{ 'Passenger Flights:'(002)  } { pf_count } | TO r_result.
     APPEND |{ 'Average free seats:'(003) } { get_average_free_seats(  ) } | TO r_result.
-    APPEND |{ 'Cargo Flights:'(004)      } { lines( cargo_flights     ) } | TO r_result.
+    APPEND |{ 'Cargo Flights:'(004)      } { cf_count } | TO r_result.
 
   ENDMETHOD.
 
@@ -630,15 +649,17 @@ CLASS lcl_carrier IMPLEMENTATION.
 
     e_days_later = 99999999.
 
-    LOOP AT me->cargo_flights INTO DATA(flight)
-        WHERE table_line->flight_date >= i_from_date.
+*    LOOP AT me->cargo_flights INTO DATA(flight)
+    LOOP AT me->flights INTO DATA(flight)
+           WHERE table_line->flight_date >= i_from_date
+           AND table_line IS INSTANCE OF lcl_cargo_flight.
 
       DATA(connection_details) = flight->get_connection_details(  ).
 
       IF connection_details-airport_from_id = i_airport_from_id
        AND connection_details-airport_to_id = i_airport_to_id
-       AND flight->get_free_capacity(  ) >= i_cargo.
-
+*       AND flight->get_free_capacity(  ) >= i_cargo.
+      AND CAST lcl_cargo_flight( flight )->get_free_capacity( ) >= i_cargo.
 *        DATA(days_later) =  i_from_date - flight->flight_date.
         DATA(days_later) =   flight->flight_date - i_from_date .
 
@@ -655,14 +676,16 @@ CLASS lcl_carrier IMPLEMENTATION.
 
     e_days_later = 99999999.
 
-    LOOP AT me->passenger_flights INTO DATA(flight)
-         WHERE table_line->flight_date >= i_from_date.
+    LOOP AT me->flights INTO DATA(flight)
+         WHERE table_line->flight_date >= i_from_date
+         AND table_line IS INSTANCE OF lcl_passenger_flight.
 
       DATA(connection_details) = flight->get_connection_details(  ).
 
       IF connection_details-airport_from_id = i_airport_from_id
        AND connection_details-airport_to_id = i_airport_to_id
-       AND flight->get_free_seats( ) >= i_seats.
+*       AND flight->get_free_seats( ) >= i_seats.
+         AND CAST lcl_passenger_flight( flight )->get_free_seats( ) >= i_seats.
         DATA(days_later) = flight->flight_date - i_from_date.
 
         IF days_later < e_days_later. "earlier than previous one?
@@ -699,12 +722,20 @@ CLASS lcl_carrier IMPLEMENTATION.
 *
 * Table Reductions
 **********************************************************************
-    r_result = REDUCE #(
-                 INIT i = 0
-                  FOR <flight> IN passenger_flights
-                 NEXT i = i + <flight>->get_free_seats( )
-                       )
-             / lines( passenger_flights ) .
+*    r_result = REDUCE #(
+*                 INIT i = 0
+*                  FOR <flight> IN passenger_flights
+*                 NEXT i = i + <flight>->get_free_seats( )
+*                       )
+*             / lines( passenger_flights ) .
+
+    r_result  = REDUCE #(
+                     INIT i = 0
+                      FOR <flight> IN me->flights
+                      WHERE ( table_line IS INSTANCE OF lcl_passenger_flight )
+                     NEXT i = i + CAST lcl_passenger_flight( <flight> )->get_free_seats( )
+                           )
+                 / pf_count.
 
   ENDMETHOD.
 
