@@ -18,7 +18,7 @@ CLASS ZCL_5952_OOS_INTERFACE IMPLEMENTATION.
   METHOD if_oo_adt_classrun~main.
 
 *    CONSTANTS c_carrier_id TYPE /dmo/carrier_id VALUE 'LH'.
-*    CONSTANTS c_carrier_id TYPE /dmo/carrier_id VALUE 'UA'...
+*    CONSTANTS c_carrier_id TYPE /dmo/carrier_id VALUE 'UA'.
     CONSTANTS c_carrier_id TYPE /dmo/carrier_id VALUE 'LH'.
 
     TRY.
