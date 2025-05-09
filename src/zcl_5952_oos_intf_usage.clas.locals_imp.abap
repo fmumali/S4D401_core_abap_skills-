@@ -548,6 +548,8 @@ CLASS lcl_carrier DEFINITION CREATE PRIVATE.
              tt_output FOR lif_output~tt_output,
              t_output FOR lif_output~t_output.
 
+    TYPES: tt_carriers TYPE STANDARD TABLE OF REF TO lcl_carrier WITH DEFAULT KEY.
+
     CLASS-METHODS get_instance
       IMPORTING
         i_carrier_id    TYPE /dmo/carrier_id
@@ -584,6 +586,8 @@ CLASS lcl_carrier DEFINITION CREATE PRIVATE.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
+
+    CLASS-DATA instances TYPE tt_carriers.
 
     METHODS constructor
       IMPORTING
@@ -633,12 +637,20 @@ CLASS lcl_carrier IMPLEMENTATION.
       RAISE EXCEPTION TYPE cx_abap_auth_check_exception.
     ENDIF.
 
-    r_result = NEW #(
-      i_carrier_id = i_carrier_id
-    ).
+    TRY.
+        r_result = instances[ table_line->carrier_id = i_carrier_id  ].
+      CATCH cx_sy_itab_line_not_found.
 
-    r_result->name  = details-name.
-    r_result->currency_code = details-currency_code.
+        r_result = NEW #(
+          i_carrier_id = i_carrier_id
+        ).
+
+        r_result->name  = details-name.
+        r_result->currency_code = details-currency_code.
+
+        APPEND r_result TO instances.
+
+    ENDTRY.
 
   ENDMETHOD.
 
