@@ -462,8 +462,9 @@ CLASS lcl_carrier DEFINITION CREATE PRIVATE.
       RETURNING
         VALUE(r_result) TYPE REF TO lcl_carrier
       RAISING
-        cx_abap_invalid_value
-        cx_abap_auth_check_exception.
+*        cx_abap_invalid_value
+*        cx_abap_auth_check_exception
+        zcx_5952_failed.
 
 
     DATA carrier_id TYPE /dmo/carrier_id READ-ONLY.
@@ -526,9 +527,10 @@ CLASS lcl_carrier IMPLEMENTATION.
      INTO @DATA(details).
 
     IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE cx_abap_invalid_value
+      RAISE EXCEPTION TYPE zcx_5952_failed
         EXPORTING
-          value = CONV #( i_carrier_id ).
+          textid     = zcx_5952_failed=>carrier_not_found
+          carrier_id  = i_carrier_id.
     ENDIF.
 
     AUTHORITY-CHECK
@@ -537,9 +539,10 @@ CLASS lcl_carrier IMPLEMENTATION.
                ID 'ACTVT'     FIELD '03'.
 
     IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE cx_abap_auth_check_exception
+      RAISE EXCEPTION TYPE zcx_5952_failed
         EXPORTING
-          textid = cx_abap_auth_check_exception=>missing_authorization.
+          textid = zcx_5952_failed=>carrier_no_read_auth
+          carrier_id = i_carrier_id.
     ENDIF.
 
     TRY.
